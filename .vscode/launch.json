@@ -5,14 +5,54 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "armToolchainPath": "../../zephyr-sdk-0.17.2/arm-zephyr-eabi/bin",
+            "armToolchainPath": "${env:HOME}/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin",
             "name": "Debug Cortex M3",
             "type": "cortex-debug",
             "request": "launch",
+            "preLaunchCommands": [
+                "set logging enabled on",
+                "set debug remote 1"
+            ],
             "machine": "lm3s6965evb",
             "executable": "${workspaceFolder}/build/zephyr/zephyr.elf",
             "cwd": "${workspaceFolder}",
             "servertype": "qemu",
+            "breakAfterReset": true,
+            "showDevDebugOutput": "raw",
+            "toolchainPrefix": "arm-zephyr-eabi"
+        },
+        {
+            "armToolchainPath": "${env:HOME}/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin",
+            "name": "Debug Cortex M3 record",
+            "type": "cortex-debug",
+            "request": "launch",
+            "preLaunchCommands": [
+                "set logging enabled on",
+                "set debug remote 1"
+            ],
+            "machine": "lm3s6965evb",
+            "executable": "${workspaceFolder}/build/zephyr/zephyr.elf",
+            "cwd": "${workspaceFolder}",
+            "servertype": "qemu",
+            "serverArgs": ["-icount", "shift=auto,rr=record,rrfile=replay.bin"],
+            "breakAfterReset": true,
+            "showDevDebugOutput": "raw",
+            "toolchainPrefix": "arm-zephyr-eabi"
+        },
+        {
+            "armToolchainPath": "${env:HOME}/zephyr-sdk-0.17.2/arm-zephyr-eabi/bin",
+            "name": "Debug Cortex M3 replay",
+            "type": "cortex-debug",
+            "request": "launch",
+            "preLaunchCommands": [
+                "set logging enabled on",
+                "set debug remote 1"
+            ],
+            "machine": "lm3s6965evb",
+            "executable": "${workspaceFolder}/build/zephyr/zephyr.elf",
+            "cwd": "${workspaceFolder}",
+            "servertype": "qemu",
+            "serverArgs": ["-icount", "shift=auto,rr=replay,rrfile=replay.bin"],
             "breakAfterReset": true,
             "showDevDebugOutput": "raw",
             "toolchainPrefix": "arm-zephyr-eabi"
