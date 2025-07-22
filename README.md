@@ -11,6 +11,8 @@ This repository is just the application mentioned in the tutorial.
 The tutorial was extended by adding verbose debug logging to GDB and
 by adding QEMU record and replay configurations to the normal one.
 
+https://qemu-project.gitlab.io/qemu/system/replay.html
+
 While reverse time options are not recognized by the `cortex-debug` VSCode extension,
 They are clearly advertized by the QEMU GDB stub:
 
