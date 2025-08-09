@@ -1,0 +1,30 @@
+###############################################################################
+# script for recording a trace
+###############################################################################
+
+set logging enabled on
+set debug remote 1
+file build/zephyr/zephyr.elf
+target extended-remote localhost:50000
+info registers
+## perform 8 forward steps
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#info registers
+## perform 8 backward steps
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#stepi
+#info registers
+#

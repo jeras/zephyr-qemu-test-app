@@ -8,6 +8,18 @@ https://dojofive.com/blog/using-the-qemu-emulator-with-zephyr-builds-and-vscode/
 
 This repository is just the application mentioned in the tutorial.
 
+To compile Zephyr from the application folder `.../zephyrproject/zephyr-qemu-test-app/`:
+
+```sh
+source ../.venv/bin/activate
+west build -d build-qemu_cortex_m3 -b qemu_cortex_m3
+west build -d build-qemu_cortex_m3 -t run
+west build -d build-qemu_x86 -b qemu_x86
+west build -d build-qemu_x86 -t run
+```
+
+Use verbose mode `west -v` to get the details of the CLI for running QEMU.
+
 The tutorial was extended by adding verbose debug logging to GDB and
 by adding QEMU record and replay configurations to the normal one.
 
@@ -23,3 +35,109 @@ They are clearly advertized by the QEMU GDB stub:
   [remote] packet_ok: Packet qSupported (supported-packets) is supported
 ```
 
+## CLI tests
+
+### ARM
+
+Following the previous steps, the ELF file is `build/zephyr/zephyr.elf`.
+
+Launch QEMU in `record` mode to file `record.bin`.
+
+```sh
+qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_cortex_m3/zephyr/zephyr.elf -icount shift=auto,rr=record,rrfile=record-qemu_cortex_m3.bin
+```
+
+Launch QEMU in `replay` mode from file `record.bin` (created in the previous example).
+
+```sh
+qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_cortex_m3/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_m3.bin
+```
+
+### i386
+
+Record:
+```sh
+~/VLSI/qemu/build/qemu-system-i386 -m 32 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -nographic -machine acpi=off -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_x86.bin -rtc clock=vm -kernel build-qemu_x86/zephyr/zephyr.elf -gdb "tcp::50000" -S
+```
+Replay:
+```sh
+~/VLSI/qemu/build/qemu-system-i386 -m 32 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -nographic -machine acpi=off -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin -rtc clock=vm -kernel build-qemu_x86/zephyr/zephyr.elf -gdb "tcp::50000" -S
+```
+```
+qemu-system-i386 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_x86/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin
+qemu-system-i386 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_x86/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin
+```
+-machine q35
+
+Running GDB:
+
+```sh
+$ gdb-multiarch
+(gdb) set logging enabled on
+(gdb) set debug remote 1
+(gdb) file build/zephyr/zephyr.elf
+(gdb) target extended-remote localhost:50000
+```
+
+To run GDB with a `filename` script do:
+
+```sh
+$ gdb-multiarch -x filename
+```
+
+GDB scripts:
+ 
+* [gdb-record.scr](scripts/gdb-record.scr)
+* [gdb-replay.scr](scripts/gdb-replay.scr)
+
+## QEMU
+
+```sh
+./configure
+make qemu-system-aarch64
+make qemu-system-arm
+make qemu-system-x86_64
+make qemu-system-riscv32
+make qemu-system-riscv64
+```
+
+To Compile functiona tests:
+
+```sh
+make check-functional-aarch64
+
+$ make check-functional-mips
+5/6 qemu:func-thorough+func-mips-thorough+thorough / func-mips-mips_replay        OK               1.75s   1 subtests passed
+```
+
+
+
+To compile a debug version of QEMU:
+
+```
+./configure --enable-debug
+qemu-system-... -D -d ...
+```
+
+
+$qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-events+;exec-events+;vContSupported+;QThreadEvents+;QThreadOptions+;no-resumed+;memory-tagging+;xmlRegisters=i386
+
+./configure \
+--host=x86_64-linux-gnu --target=x86_64-linux-gnu \
+--with-auto-load-dir=$debugdir:$datadir/auto-load \
+--with-auto-load-safe-path=$debugdir:$datadir/auto-load \
+--with-expat \
+--without-libunwind-ia64 \
+--with-lzma \
+--with-babeltrace \
+--with-intel-pt \
+--with-xxhash \
+--with-debuginfod \
+--with-curses \
+--without-guile \
+--without-amd-dbgapi \
+--enable-source-highlight \
+--enable-threading \
+--enable-tui \
+--with-system-readline \
+--enable-targets=all
