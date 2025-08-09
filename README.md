@@ -19,6 +19,8 @@ west build -d build-qemu_x86 -t run
 ```
 
 Use verbose mode `west -v` to get the details of the CLI for running QEMU.
+Some targets like `i386` might clear the screen during execution,
+in this case pipe the standard output into a log file (`... > qemu.log`).
 
 The tutorial was extended by adding verbose debug logging to GDB and
 by adding QEMU record and replay configurations to the normal one.
