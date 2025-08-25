@@ -4,7 +4,7 @@
 
 set logging enabled on
 set debug remote 1
-file build-qemu_cortex_a53/zephyr/zephyr.elf
+file build/zephyr/zephyr.elf
 target extended-remote localhost:1234
 info registers
 # perform 8 forward steps

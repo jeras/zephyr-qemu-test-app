@@ -12,27 +12,12 @@ To compile Zephyr from the application folder `.../zephyrproject/zephyr-qemu-tes
 
 ```sh
 source ../.venv/bin/activate
-west build -d build-qemu_cortex_m3 -b qemu_cortex_m3
-west build -d build-qemu_cortex_m3 -t run
-west build -d build-qemu_cortex_r5 -b qemu_cortex_r5
-west build -d build-qemu_cortex_r5 -t run
-west build -d build-qemu_cortex_a53 -b qemu_cortex_a53
-west build -d build-qemu_cortex_a53 -t run
-west build -d build-qemu_x86 -b qemu_x86
-west build -d build-qemu_x86 -t run
-west build -d build-qemu_x86 -t debugserver_qemu
-west build -d build-qemu_x86_64 -b qemu_x86_64
-west build -d build-qemu_x86_64 -t run
-west build -d build-qemu_riscv32 -b qemu_riscv32
-west build -d build-qemu_riscv32 -t run
-west build -d build-qemu_riscv64 -b qemu_riscv64
-west build -d build-qemu_riscv64 -t run
+west build -b qemu_cortex_a53
+west build -t run
 ```
 
 Use verbose mode `west -v` to get the details of the CLI for running QEMU.
 Or better, search for `debugserver_qemu` in `build.ninja` in the build folder.
-Some targets like `i386` might clear the screen during execution,
-in this case pipe the standard output into a log file (`... > qemu.log`).
 
 The tutorial was extended by adding verbose debug logging to GDB and
 by adding QEMU record and replay configurations to the normal one.
@@ -49,54 +34,75 @@ They are clearly advertized by the QEMU GDB stub:
   [remote] packet_ok: Packet qSupported (supported-packets) is supported
 ```
 
-## CLI tests
+## Debugging
 
-### ARM
+The official method for running QEMU with a debug socket would be:
+
+```sh
+west debugserver
+```
+
+But it does not seem to work, an alternative is:
+
+```sh
+ninja -C build/ debugserver_qemu -v
+```
+
+To connect the Seer GUI to the socket run:
+
+```sh
+seergdb --gdb-program gdb-multiarch --project project.seer
+```
+
+### QEMU record/replay
 
 Following the previous steps, the ELF file is `build/zephyr/zephyr.elf`.
 
 Launch QEMU in `record` mode to file `record.bin`.
 
 ```sh
-qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_cortex_m3/zephyr/zephyr.elf -icount shift=auto,rr=record,rrfile=record-qemu_cortex_m3.bin
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf
+```
+
+And in a separate shell run GDB with a script to create a recording.
+
+```sh
+gdb-multiarch -x scripts/gdb-record.scr
+```
+
+The QEMU `rrfile` file does not contain the a system state snapshot
+or small grained system state diff for each instruction step.
+Instead it requires a separate snapshot and the `rrfile` contains
+only the record of nondeterministic input.
+
+A snapshot file is needed to run the replay.
+The snapshot file is created by running:
+
+```sh
+qemu-img create -f qcow2 scratch.qcow2 64M
 ```
 
 Launch QEMU in `replay` mode from file `record.bin` (created in the previous example).
+Compared to recording, replaying requires a snapshot file (`-blockdev`).
 
 ```sh
-qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_cortex_m3/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_m3.bin
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf -blockdev driver=qcow2,node-name=replayhdhd,file.driver=file,file.filename=scratch.qcow2
 ```
 
-### i386
-
-Record:
-```sh
-~/VLSI/qemu/build/qemu-system-i386 -m 32 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -nographic -machine acpi=off -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_x86.bin -rtc clock=vm -kernel build-qemu_x86/zephyr/zephyr.elf -gdb "tcp::50000" -S
-```
-Replay:
-```sh
-~/VLSI/qemu/build/qemu-system-i386 -m 32 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -no-reboot -nographic -machine acpi=off -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin -rtc clock=vm -kernel build-qemu_x86/zephyr/zephyr.elf -gdb "tcp::50000" -S
-```
-```
-qemu-system-i386 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_x86/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin
-qemu-system-i386 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase=0xf4,iosize=0x04 -nographic -semihosting-config enable=on,target=native -gdb "tcp::50000" -S -kernel build-qemu_x86/zephyr/zephyr.elf -icount shift=auto,rr=replay,rrfile=record-qemu_x86.bin
-```
--machine q35
-
-### Cortex-A53
-
-#### Record
+Since the recording is short (only 8 instructions)
+stepping through it will soon reach the end and terminate.
+There is a [QEMU issue](https://gitlab.com/qemu-project/qemu/-/issues/3076)
+intended for improving the behavior
+of attempted stepping outside the recorded execution.
 
 ```sh
-$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel /home/izi/zephyrproject/TestApp/build-qemu_cortex_a53/zephyr/zephyr.elf
-
-gdb-multiarch -x scripts/gdb-record.scr
+seergdb --gdb-program gdb-multiarch --project project.seer
 ```
 
-```sh
-$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel /home/izi/zephyrproject/TestApp/build-qemu_cortex_a53/zephyr/zephyr.elf
+This unfinished script can be used to automatically test record/replay features:
 
-gdb-multiarch -x scripts/gdb-record.scr
+```sh
+gdb-multiarch -x scripts/gdb-replay.scr
 ```
 
 ### Running GDB:

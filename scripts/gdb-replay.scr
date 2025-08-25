@@ -4,27 +4,23 @@
 
 set logging enabled on
 set debug remote 1
-file build-cortex_a53/zephyr/zephyr.elf
+file build/zephyr/zephyr.elf
 target extended-remote localhost:1234
 info registers
 ## perform 8 forward steps
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
+stepi
+stepi
+stepi
+stepi
+stepi
+stepi
+stepi
+stepi
 #info registers
-## perform 8 backward steps
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
-#stepi
+## perform 4 backward steps
+reverse-stepi
+reverse-stepi
+reverse-stepi
+reverse-stepi
 #info registers
 #

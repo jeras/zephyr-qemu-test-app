@@ -1,0 +1,19 @@
+{
+    "seerproject": {
+        "connectmode": {
+            "gdbserver": "localhost:1234",
+            "gdbserverdebug": false,
+            "targettype": "extended-remote"
+        },
+        "executable": "build/zephyr/zephyr.elf",
+        "postgdbcommands": [
+            ""
+        ],
+        "pregdbcommands": [
+            "set logging enabled on",
+            "set debug remote 1"
+        ],
+        "symbolfile": "",
+        "workingdirectory": ""
+    }
+}
