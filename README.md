@@ -14,11 +14,23 @@ To compile Zephyr from the application folder `.../zephyrproject/zephyr-qemu-tes
 source ../.venv/bin/activate
 west build -d build-qemu_cortex_m3 -b qemu_cortex_m3
 west build -d build-qemu_cortex_m3 -t run
+west build -d build-qemu_cortex_r5 -b qemu_cortex_r5
+west build -d build-qemu_cortex_r5 -t run
+west build -d build-qemu_cortex_a53 -b qemu_cortex_a53
+west build -d build-qemu_cortex_a53 -t run
 west build -d build-qemu_x86 -b qemu_x86
 west build -d build-qemu_x86 -t run
+west build -d build-qemu_x86 -t debugserver_qemu
+west build -d build-qemu_x86_64 -b qemu_x86_64
+west build -d build-qemu_x86_64 -t run
+west build -d build-qemu_riscv32 -b qemu_riscv32
+west build -d build-qemu_riscv32 -t run
+west build -d build-qemu_riscv64 -b qemu_riscv64
+west build -d build-qemu_riscv64 -t run
 ```
 
 Use verbose mode `west -v` to get the details of the CLI for running QEMU.
+Or better, search for `debugserver_qemu` in `build.ninja` in the build folder.
 Some targets like `i386` might clear the screen during execution,
 in this case pipe the standard output into a log file (`... > qemu.log`).
 
@@ -71,7 +83,23 @@ qemu-system-i386 -cpu qemu32,+nx,+pae -machine q35 -device isa-debug-exit,iobase
 ```
 -machine q35
 
-Running GDB:
+### Cortex-A53
+
+#### Record
+
+```sh
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel /home/izi/zephyrproject/TestApp/build-qemu_cortex_a53/zephyr/zephyr.elf
+
+gdb-multiarch -x scripts/gdb-record.scr
+```
+
+```sh
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel /home/izi/zephyrproject/TestApp/build-qemu_cortex_a53/zephyr/zephyr.elf
+
+gdb-multiarch -x scripts/gdb-record.scr
+```
+
+### Running GDB:
 
 ```sh
 $ gdb-multiarch
@@ -124,16 +152,14 @@ qemu-system-... -D -d ...
 
 $qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-events+;exec-events+;vContSupported+;QThreadEvents+;QThreadOptions+;no-resumed+;memory-tagging+;xmlRegisters=i386
 
+## GDB
+
 ./configure \
---host=x86_64-linux-gnu --target=x86_64-linux-gnu \
 --with-auto-load-dir=$debugdir:$datadir/auto-load \
 --with-auto-load-safe-path=$debugdir:$datadir/auto-load \
 --with-expat \
 --without-libunwind-ia64 \
 --with-lzma \
---with-babeltrace \
---with-intel-pt \
---with-xxhash \
 --with-debuginfod \
 --with-curses \
 --without-guile \
@@ -143,3 +169,6 @@ $qSupported:multiprocess+;swbreak+;hwbreak+;qRelocInsn+;fork-events+;vfork-event
 --enable-tui \
 --with-system-readline \
 --enable-targets=all
+
+lsb-release xz-utils autoconf libtool gettext bison dejagnu flex procps gobjc texinfo texlive-base
+libexpat1-dev libncurses-dev libreadline-dev zlib1g-dev liblzma-dev libzstd-dev libbabeltrace-dev libipt-dev libsource-highlight-dev libxxhash-dev libmpfr-dev pkg-config python3-dev libdebuginfod-dev libc6-dbg
