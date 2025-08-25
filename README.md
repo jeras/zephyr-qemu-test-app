@@ -61,7 +61,7 @@ Following the previous steps, the ELF file is `build/zephyr/zephyr.elf`.
 Launch QEMU in `record` mode to file `record.bin`.
 
 ```sh
-$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=record,rrfile=record.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf
 ```
 
 And in a separate shell run GDB with a script to create a recording.
@@ -86,7 +86,7 @@ Launch QEMU in `replay` mode from file `record.bin` (created in the previous exa
 Compared to recording, replaying requires a snapshot file (`-blockdev`).
 
 ```sh
-$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record-qemu_cortex_a53.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf -blockdev driver=qcow2,node-name=replayhdhd,file.driver=file,file.filename=scratch.qcow2
+$ ~/zephyr-sdk-0.17.2/sysroots/x86_64-pokysdk-linux/usr/bin/qemu-system-aarch64 -global virtio-mmio.force-legacy=false -cpu cortex-a53 -nographic -machine virt,secure=on,gic-version=3 -net none -pidfile qemu.pid -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline -icount shift=auto,rr=replay,rrfile=record.bin -rtc clock=vm -S -gdb tcp::1234 -kernel build/zephyr/zephyr.elf -blockdev driver=qcow2,node-name=replayhdhd,file.driver=file,file.filename=scratch.qcow2
 ```
 
 Since the recording is short (only 8 instructions)
